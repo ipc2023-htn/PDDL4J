@@ -45,7 +45,7 @@ From: ubuntu:22.04
 %labels
 Name        PDDL4J
 Description 
-Authors     
+Authors Damien Pellier <damien.pellier@imag.fr> and Humbert Fiorino <humbert.fiorino@imag.fr>
 SupportsRecursion 
 SupportsPartialOrder 
 SupportsOptimalPlanning 
