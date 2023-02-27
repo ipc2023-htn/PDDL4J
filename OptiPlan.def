@@ -21,11 +21,11 @@ From: ubuntu:22.04
 	
 	## Install all necessary dependencies.
 	apt-get update
-	apt-get -y install make g++
-	
+	apt-get -y install openjdk-8-jdk gradle
+
 	## go to directory and make the planner
 	cd /planner
-	
+	./gradlew build
 	## remove files not needed to execute the planner
 
 %runscript
@@ -37,15 +37,18 @@ From: ubuntu:22.04
 	PROBLEMFILE=$2
 	## PLANFILE is the name of the file to which your planner should write the plan it found.
 	PLANFILE=$3
+	TIMELIMIT=$4
+	MEMORYLIMIT=$5
 
 	## run your planner here
+	stdbuf -o0 -e0 java -server -Xms${MEMORYLIMIT}m -Xmx${MEMORYLIMIT}m -cp /planner/build/libs/pddl4j-optiplan.jar $TIMELIMIT $DOMAINFILE $PROBLEMFILE 2>&1 | tee $PLANFILE
 
 ## Update the following fields with meta data about your submission.
 ## Please use the same field names and use only one line for each value.
 %labels
-Name        PDDL4J
-Description 
-Authors Damien Pellier <damien.pellier@imag.fr> and Humbert Fiorino <humbert.fiorino@imag.fr>
-SupportsRecursion 
-SupportsPartialOrder 
+Name        OptiPlan
+Description OptiPlan
+Authors Damien Pellier <damien.pellier@imag.fr> and Humbert Fiorino <humbert.fiorino@imag.fr> and Oleksandr Firsov <oleksandr.firsov@univ-grenoble-alpes.fr> and Gaspard Quenard <gaspard.quenard@univ-grenoble-alpes.fr>
+SupportsRecursion yes
+SupportsPartialOrder yes
 SupportsOptimalPlanning 
