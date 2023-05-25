@@ -1,0 +1,55 @@
+Bootstrap: docker
+From: ubuntu:22.04
+
+%files
+	## This copies all files in this repository into the container.
+	## If you do so, please remove all files not needed to run the planner
+	## (e.g. source-code, testing or debugging planning problems) from the container
+	## to decrease its size as much as possible.
+	. /planner	
+
+%setup
+	## The "%setup"-part of this script is called to bootstrap an empty
+	## container.
+
+%post
+	## The "%post"-part of this script is called after the container has
+	## been created with the "%setup"-part above and runs "inside the
+	## container". Most importantly, it is used to install dependencies
+	## and build the planner. Add all commands that have to be executed
+	## once before the planner runs in this part of the script.
+	
+	## Install all necessary dependencies.
+	apt-get update
+	apt-get -y install openjdk-8-jdk gradle
+
+	## go to directory and make the planner
+	cd /planner
+	./gradlew build
+	## remove files not needed to execute the planner
+
+%runscript
+	## The runscript is called whenever the container is used to solve
+	## an instance.
+	
+	## DOMAINFILE and PROBLEMFILE contain the HDDL input files.
+	DOMAINFILE=$1
+	PROBLEMFILE=$2
+	## PLANFILE is the name of the file to which your planner should write the plan it found.
+	PLANFILE=$3
+	TIMELIMIT=$4
+	MEMORYLIMIT=$5
+
+	## run your planner here
+	stdbuf -o0 -e0 java -server -Xms${MEMORYLIMIT}m -Xmx${MEMORYLIMIT}m -cp /planner/build/libs/pddl4j-optiplan.jar $TIMELIMIT $DOMAINFILE $PROBLEMFILE 2>&1 | tee $PLANFILE
+
+## Update the following fields with meta data about your submission.
+## Please use the same field names and use only one line for each value.
+%labels
+Name        LiftedTreePath
+Description LiftedTreePath
+Authors Damien Pellier <damien.pellier@imag.fr> and Humbert Fiorino <humbert.fiorino@imag.fr> and Oleksandr Firsov <oleksandr.firsov@univ-grenoble-alpes.fr> and Gaspard Quenard <gaspard.quenard@univ-grenoble-alpes.fr>
+SupportsRecursion yes
+SupportsTotalOrder yes
+SupportsPartialOrder no
+SupportsOptimalPlanning no
