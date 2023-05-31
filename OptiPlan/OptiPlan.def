@@ -1,0 +1,64 @@
+Bootstrap: docker
+From: ubuntu:20.04
+
+%files
+	## This copies all files in this repository into the container.
+	## If you do so, please remove all files not needed to run the planner
+	## (e.g. source-code, testing or debugging planning problems) from the container
+	## to decrease its size as much as possible.
+	. /planner	
+
+%setup
+	## The "%setup"-part of this script is called to bootstrap an empty
+	## container.
+
+%post
+	## The "%post"-part of this script is called after the container has
+	## been created with the "%setup"-part above and runs "inside the
+	## container". Most importantly, it is used to install dependencies
+	## and build the planner. Add all commands that have to be executed
+	## once before the planner runs in this part of the script.
+	
+	## Install all necessary dependencies.
+	apt-get update
+	## Installing Java (planner + PDDL4J library)
+	apt-get -y install openjdk-8-jdk #gradle
+	## Installing MiniZinc (solver framework)
+	cd planner
+	# modifying env vars for command line use
+    	echo "PATH=mznBundle/bin:$PATH" >> $SINGULARITY_ENVIRONMENT
+    	echo "export LD_LIBRARY_PATH=mznBundle/lib:$LD_LIBRARY_PATH" >> $SINGULARITY_ENVIRONMENT
+    	echo "export QT_PLUGIN_PATH=mznBundle/plugins:$QT_PLUGIN_PATH" >> $SINGULARITY_ENVIRONMENT
+    	# building jar
+    	#./gradlew build
+    	
+    	## remove files not needed to execute the planner
+    	## TODO
+
+
+
+%runscript
+    ## The runscript is called whenever the container is used to solve
+    ## an instance.
+
+    DOMAINFILE=$1
+    PROBLEMFILE=$2
+    PLANFILE=$3
+
+    ## Calling the planner
+    stdbuf -o0 -e0 java -jar /planner/optiplan.jar csp po $DOMAINFILE $PROBLEMFILE | tee $PLANFILE
+
+    
+
+
+
+	
+## Update the following fields with meta data about your submission.
+## Please use the same field names and use only one line for each value.
+%labels
+Name        OptiPlan
+Description OptiPlan
+Authors Damien Pellier <damien.pellier@imag.fr> and Humbert Fiorino <humbert.fiorino@imag.fr> and Oleksandr Firsov <oleksandr.firsov@univ-grenoble-alpes.fr> and Gaspard Quenard <gaspard.quenard@univ-grenoble-alpes.fr>
+SupportsRecursion yes
+SupportsPartialOrder yes
+SupportsOptimalPlanning no

@@ -1,0 +1,26 @@
+(define
+	(problem pfile02)
+	(:domain  domain_htn)
+	(:objects
+		city_loc_0 - location
+		city_loc_1 - location
+		city_loc_3 - location
+		package_0 - package
+		truck_0 - vehicle
+	)
+	(:htn
+		:parameters ()
+		:subtasks (and
+		 (task0 (deliver package_0 city_loc_0))
+		)
+		:ordering (and
+		)
+	)
+	(:init
+		(road city_loc_0 city_loc_3)
+		(road city_loc_1 city_loc_3)
+		(road city_loc_3 city_loc_0)
+		(road city_loc_3 city_loc_1)
+		(at truck_0 city_loc_1)
+	)
+)
