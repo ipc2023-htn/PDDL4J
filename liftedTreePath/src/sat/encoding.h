@@ -26,9 +26,9 @@ private:
     FactAnalysis& _analysis;
     std::vector<Layer*>& _layers;
     EncodingStatistics _stats;
-    EncodingStatistics _smt_stats;
+    // EncodingStatistics _smt_stats;
     SatInterface _sat;
-    SmtInterface _smt;
+    // SmtInterface _smt;
     VariableProvider _vars;
     Decoder _decoder;
 
@@ -63,9 +63,9 @@ public:
     Encoding(Parameters& params, HtnInstance& htn, FactAnalysis& analysis, std::vector<Layer*>& layers, std::function<void()> terminationCallback) : 
             _params(params), _htn(htn), _analysis(analysis), _layers(layers),
             _sat(_params.getIntParam("smt") <= 0, params, _stats), _vars(_params, _htn, _layers),
-            _smt(_params.getIntParam("smt") > 0, params, _smt_stats, htn.getConstantsBySort()), 
+            // _smt(_params.getIntParam("smt") > 0, params, // _smt_stats, htn.getConstantsBySort()), 
             _useSMTSolver(_params.getIntParam("smt") > 0),
-            _decoder(_htn, _layers, _sat, _smt, _vars, _params.getIntParam("smt") > 0),
+            _decoder(_htn, _layers, _sat, _vars, _params.getIntParam("smt") > 0),
             _termination_callback(terminationCallback),
             _use_q_constant_mutexes(_params.getIntParam("qcm") > 0), 
             USE_LIFTED_TREE_PATH(_params.isNonzero("useLiftedTreePathEncoder")),
@@ -102,7 +102,7 @@ public:
     
     void printStatistics() {
         if (_useSMTSolver) {
-            _smt_stats.printStages();
+            // _smt_stats.printStages();
         } else {
             _stats.printStages();
         }
@@ -112,7 +112,7 @@ public:
 
     ~Encoding() {
         // Append assumptions to written formula, close stream
-        if (!_params.isNonzero("cs") && (!_useSMTSolver && !_sat.hasLastAssumptions()) || (_useSMTSolver && !_smt.hasLastAssumptions())) {
+        if (!_params.isNonzero("cs") && (!_useSMTSolver && !_sat.hasLastAssumptions())) {
             addAssumptions(_layers.size()-1);
         }
     }

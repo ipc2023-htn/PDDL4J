@@ -506,7 +506,7 @@ void Encoding::encodeSubstitutionVars(const USignature& opSig, int opVar, int ar
         if (_useSMTSolver) {
             int idxBinVar = 0;
             for (int v : bamo.getBinNumVar()) {
-                _smt.addVar(v, "__amo_" + std::to_string(idxBinVar++), pos.getLayerIndex(), pos.getPositionIndex());
+                // _smt.addVar(v, "__amo_" + std::to_string(idxBinVar++), pos.getLayerIndex(), pos.getPositionIndex());
             }
         }
         for (const auto& c : bamo.encode()) {
@@ -892,8 +892,8 @@ void onClauseLearnt(void* state, int* cls) {
 int Encoding::solve() {
 
     if (_useSMTSolver) {
-        Log::i("Attempting to solve formula with %i clauses (%i literals) %i assumptions and %i variables\n", 
-            _smt_stats._num_cls, _smt_stats._num_lits, _smt_stats._num_asmpts, VariableDomain::getMaxVar());
+        // Log::i("Attempting to solve formula with %i clauses (%i literals) %i assumptions and %i variables\n", 
+            // _smt_stats._num_cls, // _smt_stats._num_lits, // _smt_stats._num_asmpts, VariableDomain::getMaxVar());
     }
     else {
         Log::i("Attempting to solve formula with %i clauses (%i literals) %i assumptions and %i variables\n", 
@@ -1866,7 +1866,7 @@ int Encoding::__interfaceSolver__encodeVariable(VarType type, Position& pos, con
     // int var = _vars.encodeVariable(type, pos, sig);
 
     if (_useSMTSolver) {
-        _smt.addVar(var, Names::to_SMT_string(sig, _htn.isAction(sig)), pos.getLayerIndex(), pos.getPositionIndex());
+        // _smt.addVar(var, Names::to_SMT_string(sig, _htn.isAction(sig)), pos.getLayerIndex(), pos.getPositionIndex());
     }
 
     return var;
@@ -1882,7 +1882,7 @@ int Encoding::__interfaceSolver__encodeVarPrimitive(int layer, int pos) {
     }
 
     if (_useSMTSolver) {
-        _smt.addVar(var, "__PRIMITIVE___", layer, pos);
+        // _smt.addVar(var, "__PRIMITIVE___", layer, pos);
     }
 
     return var;
@@ -1893,7 +1893,7 @@ int Encoding::__interfaceSolver__encodeQConstantEqualityVar(int qconst1, int qco
 
     if (_useSMTSolver) {
         std::string var_name = "__QCONST_EQUALITY___" + std::to_string(qconst1) + "_" + std::to_string(qconst2);
-        _smt.addVar(var, var_name, -1, -1);
+        // _smt.addVar(var, var_name, -1, -1);
     }
 
     return var;
@@ -1905,8 +1905,8 @@ int Encoding::__interfaceSolver__varSubstitution(int qConstId, int trueConstId) 
 
     if (_useSMTSolver) {
         const USignature& sigSubst = _vars.sigSubstitute(qConstId, trueConstId);
-        _smt.addVar(var, Names::to_SMT_string(sigSubst), -1, -1, true, qConstId, trueConstId);
-        // _smt.addSubstituteVar(sigSubst, qConstId, trueConstId, var);
+        // _smt.addVar(var, Names::to_SMT_string(sigSubst), -1, -1, true, qConstId, trueConstId);
+        // // _smt.addSubstituteVar(sigSubst, qConstId, trueConstId, var);
     }
 
     return var;
@@ -1917,7 +1917,7 @@ int Encoding::__interfaceSolver__varSubstitution(int qConstId, int trueConstId) 
 void Encoding::__interfaceSolver__addClause(int lit) {
 
     if (_useSMTSolver) {
-        _smt.addClause(lit);
+        // _smt.addClause(lit);
     } else {
         _sat.addClause(lit);
     }
@@ -1926,7 +1926,7 @@ void Encoding::__interfaceSolver__addClause(int lit) {
 void Encoding::__interfaceSolver__addClause(int lit1, int lit2) {
 
     if (_useSMTSolver) {
-        _smt.addClause(lit1, lit2);
+        // _smt.addClause(lit1, lit2);
     } else {
         _sat.addClause(lit1, lit2);
     }
@@ -1936,7 +1936,7 @@ void Encoding::__interfaceSolver__addClause(int lit1, int lit2) {
 void Encoding::__interfaceSolver__addClause(int lit1, int lit2, int lit3) {
 
     if (_useSMTSolver) {
-        _smt.addClause(lit1, lit2, lit3);
+        // _smt.addClause(lit1, lit2, lit3);
     } else {
         _sat.addClause(lit1, lit2, lit3);
     }
@@ -1945,7 +1945,7 @@ void Encoding::__interfaceSolver__addClause(int lit1, int lit2, int lit3) {
 void Encoding::__interfaceSolver__addClause(const std::vector<int>& cls) {
 
     if (_useSMTSolver) {
-        _smt.addClause(cls);
+        // _smt.addClause(cls);
     } else {
         _sat.addClause(cls);
     }
@@ -1955,7 +1955,7 @@ void Encoding::__interfaceSolver__addClause(const std::vector<int>& cls) {
 void Encoding::__interfaceSolver__appendClause(int lit) {
 
     if (_useSMTSolver) {
-        _smt.appendClause(lit);
+        // _smt.appendClause(lit);
     } else {
         _sat.appendClause(lit);
     }
@@ -1964,7 +1964,7 @@ void Encoding::__interfaceSolver__appendClause(int lit) {
 void Encoding::__interfaceSolver__appendClause(int lit1, int lit2) {
     
     if (_useSMTSolver) {
-        _smt.appendClause(lit1, lit2);
+        // _smt.appendClause(lit1, lit2);
     } else {
         _sat.appendClause(lit1, lit2);
     }
@@ -1973,7 +1973,7 @@ void Encoding::__interfaceSolver__appendClause(int lit1, int lit2) {
 void Encoding::__interfaceSolver__endClause() {
 
     if (_useSMTSolver) {
-        _smt.endClause();
+        // _smt.endClause();
     } else {
         _sat.endClause();
     }
@@ -1983,7 +1983,7 @@ void Encoding::__interfaceSolver__endClause() {
 void Encoding::__interfaceSolver__assume(int lit) {
 
     if (_useSMTSolver) {
-        _smt.assume(lit);
+        // _smt.assume(lit);
     } else {
         _sat.assume(lit);
     }
@@ -1992,7 +1992,7 @@ void Encoding::__interfaceSolver__assume(int lit) {
 int Encoding::__interfaceSolver__solve() {
 
     if (_useSMTSolver) {
-        return _smt.solve();
+        // return _smt.solve();
     } else {
         return _sat.solve();
     }
@@ -2000,13 +2000,13 @@ int Encoding::__interfaceSolver__solve() {
 
 void Encoding::__interfaceSolver__printFormula() {
     if (_useSMTSolver) {
-        _smt.print_formula();
+        // _smt.print_formula();
     } 
 }
 
 void Encoding::__interfaceSolver__reset() {
     if (_useSMTSolver) {
-        _smt.reset_solver();
+        // _smt.reset_solver();
     } else {
         _sat.reset_solver();
     }

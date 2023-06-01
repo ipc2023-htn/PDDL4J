@@ -16,7 +16,6 @@ src/pandaPIparser/
 benchmarks/*
 *.o.d
 build/*
-*txt
 *py
 *SMT
 *csv
