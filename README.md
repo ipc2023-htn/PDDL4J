@@ -7,8 +7,9 @@ CSP-based Partial Order planner
 
 Usage:
 > optiplan.jar csp po $DOMAINFILE $PROBLEMFILE
+
 To execute via apptainer:
-> sudo apptainer build OptiPlan.sif OptiPlan.def
+> sudo apptainer build OptiPlan.sif OptiPlan.def\
 > apptainer run OptiPlan.sif [hddl domain] [hddl problem]
 
 ## LiftedTreePath
