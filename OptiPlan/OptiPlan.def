@@ -26,9 +26,9 @@ From: ubuntu:20.04
 	## Installing MiniZinc (solver framework)
 	cd /planner
 	# modifying env vars for command line use
-	echo "PATH=mznBundle/bin:$PATH" >> $SINGULARITY_ENVIRONMENT
-	echo "export LD_LIBRARY_PATH=mznBundle/lib:$LD_LIBRARY_PATH" >> $SINGULARITY_ENVIRONMENT
-	echo "export QT_PLUGIN_PATH=mznBundle/plugins:$QT_PLUGIN_PATH" >> $SINGULARITY_ENVIRONMENT
+	echo "PATH=/planner/mznBundle/bin:$PATH" >> $SINGULARITY_ENVIRONMENT
+	echo "export LD_LIBRARY_PATH=/planner/mznBundle/lib:$LD_LIBRARY_PATH" >> $SINGULARITY_ENVIRONMENT
+	echo "export QT_PLUGIN_PATH=/planner/mznBundle/plugins:$QT_PLUGIN_PATH" >> $SINGULARITY_ENVIRONMENT
 	# building jar
 	#./gradlew build
 	
@@ -44,6 +44,7 @@ From: ubuntu:20.04
     DOMAINFILE=$1
     PROBLEMFILE=$2
     PLANFILE=$3
+	mkdir minizincGenFiles
 
     ## Calling the planner
     stdbuf -o0 -e0 java -jar /planner/optiplan.jar csp po $DOMAINFILE $PROBLEMFILE | tee $PLANFILE
