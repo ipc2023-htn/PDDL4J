@@ -24,16 +24,16 @@ From: ubuntu:20.04
 	## Installing Java (planner + PDDL4J library)
 	apt-get -y install openjdk-8-jdk #gradle
 	## Installing MiniZinc (solver framework)
-	cd planner
+	cd /planner
 	# modifying env vars for command line use
-    	echo "PATH=mznBundle/bin:$PATH" >> $SINGULARITY_ENVIRONMENT
-    	echo "export LD_LIBRARY_PATH=mznBundle/lib:$LD_LIBRARY_PATH" >> $SINGULARITY_ENVIRONMENT
-    	echo "export QT_PLUGIN_PATH=mznBundle/plugins:$QT_PLUGIN_PATH" >> $SINGULARITY_ENVIRONMENT
-    	# building jar
-    	#./gradlew build
-    	
-    	## remove files not needed to execute the planner
-    	## TODO
+	echo "PATH=mznBundle/bin:$PATH" >> $SINGULARITY_ENVIRONMENT
+	echo "export LD_LIBRARY_PATH=mznBundle/lib:$LD_LIBRARY_PATH" >> $SINGULARITY_ENVIRONMENT
+	echo "export QT_PLUGIN_PATH=mznBundle/plugins:$QT_PLUGIN_PATH" >> $SINGULARITY_ENVIRONMENT
+	# building jar
+	#./gradlew build
+	
+	## remove files not needed to execute the planner
+	## TODO
 
 
 
@@ -62,3 +62,9 @@ Authors Damien Pellier <damien.pellier@imag.fr> and Humbert Fiorino <humbert.fio
 SupportsRecursion yes
 SupportsPartialOrder yes
 SupportsOptimalPlanning no
+Track-TO-agile yes
+Track-TO-satisficing yes
+Track-TO-optimal no
+Track-PO-agile no
+Track-PO-satisficing no
+Track-PO-optimal no
