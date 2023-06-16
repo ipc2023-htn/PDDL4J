@@ -21,7 +21,7 @@ From: ubuntu:22.04
 	
 	## Install all necessary dependencies.
 	apt-get update
-	apt-get -y install cmake build-essential libz-dev
+	apt-get -y install git cmake build-essential libz-dev flex bison
 
 	## go to directory and make the planner
 	cd /planner/liftedTreePath
