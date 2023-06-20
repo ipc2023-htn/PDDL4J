@@ -735,7 +735,7 @@ void Encoding::encodeQConstraints(Position& newPos) {
 
         auto it = newPos.getSubstitutionConstraints().find(opSig);
         if (it == newPos.getSubstitutionConstraints().end()) continue;
-        
+    
         for (const auto& c : it->second) {
             auto f = c.getEncoding();
             auto polarity = c.getPolarity();
@@ -893,7 +893,7 @@ int Encoding::solve() {
 
     if (_useSMTSolver) {
         // Log::i("Attempting to solve formula with %i clauses (%i literals) %i assumptions and %i variables\n", 
-            // _smt_stats._num_cls, // _smt_stats._num_lits, // _smt_stats._num_asmpts, VariableDomain::getMaxVar());
+         // _smt_stats._num_cls, // _smt_stats._num_lits, // _smt_stats._num_asmpts, VariableDomain::getMaxVar());
     }
     else {
         Log::i("Attempting to solve formula with %i clauses (%i literals) %i assumptions and %i variables\n", 
@@ -996,8 +996,8 @@ void Encoding::encode_for_lifted_tree_path(size_t layerIdx, size_t pos) {
         _vars.clearQConstantEqualityVars();
         _q_consts_at_most_one_already_added.clear();
     }
-    
 
+ 
     _termination_callback();
 
     _stats.beginPosition();
@@ -1090,12 +1090,12 @@ void Encoding::encodePrimActionTrueImpliesOneNextPrimActionIsTrue(Position& left
             // Check if the next action is in the primitive tree
             if (!pos.getActionsInPrimitiveTree().contains(nextAction)) continue;
 
-            // Get the ID of this next
-            int nextVar = _vars.getVariableUniqueID(VarType::OP, pos, nextAction);
+                // Get the ID of this next
+                int nextVar = _vars.getVariableUniqueID(VarType::OP, pos, nextAction);
 
-            __interfaceSolver__appendClause(nextVar);
-        }
-
+                __interfaceSolver__appendClause(nextVar);
+            }
+            
         __interfaceSolver__endClause();
     }
 }
@@ -1400,45 +1400,54 @@ void Encoding::encodeFrameAxioms_LiftedTreePath(Position& newPos, Position& left
                 // INDIRECT support
                 if (indir[i] != nullptr) {                    
                     for (const auto& [op, tree] : *indir[i]) {
+                        
 
-                        // The op must be an action in the primitive tree
-                        if (!left.getActionsInPrimitiveTree().contains(op)) continue;
+                        // problem here, if multiple method have the same name and parameter, there will be only one which will be gotten in the frame axioms. 
+                        // UGLY FIX: Get all the action in the primitive tree with the same name id and args
 
                         // Skip if the operation is already a DIRECT support for the fact
                         if (dir[i] != nullptr && dir[i]->count(op)) continue;
 
-                        // Encode substitutions enabling indirect support for this fact
-                        int opVar = left.getVariableOrZeroUniqueID(VarType::OP, op);
-                        USignature virtOp(_htn.getRepetitionNameOfAction(op._name_id), op._args);
-                        int virtOpVar = left.getVariableOrZeroUniqueID(VarType::OP, virtOp);
-                        if (opVar != 0) {
-                            atLeastOneAction = true;
-                            cls.push_back(opVar);
-                            encodeIndirectFrameAxioms(headerLits, opVar, tree);
-                        }
-                        if (virtOpVar != 0) {
-                            atLeastOneAction = true;
-                            cls.push_back(virtOpVar);
-                            encodeIndirectFrameAxioms(headerLits, virtOpVar, tree);
+                        for (USignature actionInPrimitiveTree : left.getActionsInPrimitiveTree()) {
+                            if (actionInPrimitiveTree == op) {
+                                // Encode substitutions enabling indirect support for this fact
+                                int opVar = left.getVariableOrZeroUniqueID(VarType::OP, actionInPrimitiveTree);
+                                USignature virtOp(_htn.getRepetitionNameOfAction(op._name_id), op._args);
+                                int virtOpVar = left.getVariableOrZeroUniqueID(VarType::OP, virtOp);
+                                if (opVar != 0) {
+                                    atLeastOneAction = true;
+                                    cls.push_back(opVar);
+                                    encodeIndirectFrameAxioms(headerLits, opVar, tree);
+                                }
+                                if (virtOpVar != 0) {
+                                    atLeastOneAction = true;
+                                    cls.push_back(virtOpVar);
+                                    encodeIndirectFrameAxioms(headerLits, virtOpVar, tree);
+                                }
+                            }
                         }
                     }
                 }
                 // DIRECT support
                 if (dir[i] != nullptr) for (const USignature& opSig : *dir[i]) {
-                    int opVar = left.getVariableOrZeroUniqueID(VarType::OP, opSig);
 
-                    // The op must be an action in the primitive tree
-                    if (!left.getActionsInPrimitiveTree().contains(opSig)) continue;
+                    // problem here, if multiple method have the same name and parameter, there will be only one which will be gotten in the frame axioms. 
+                    // UGLY FIX: Get all the action in the primitive tree with the same name id and args
+                    for (USignature actionInPrimitiveTree : left.getActionsInPrimitiveTree()) {
+                        if (actionInPrimitiveTree == opSig) {
 
-                    atLeastOneAction = true;
+                            int opVar = left.getVariableOrZeroUniqueID(VarType::OP, actionInPrimitiveTree);
+                            atLeastOneAction = true;
 
-                    if (opVar != 0) cls.push_back(opVar);
-                    USignature virt = opSig.renamed(_htn.getRepetitionNameOfAction(opSig._name_id));
-                    int virtOpVar = left.getVariableOrZeroUniqueID(VarType::OP, virt);
-                    if (virtOpVar != 0) cls.push_back(virtOpVar);
+                            if (opVar != 0) cls.push_back(opVar);
+                            USignature virt = opSig.renamed(_htn.getRepetitionNameOfAction(opSig._name_id));
+                            int virtOpVar = left.getVariableOrZeroUniqueID(VarType::OP, virt);
+                            if (virtOpVar != 0) cls.push_back(virtOpVar);
+                        }
+                    }
+
                 }
             }
-
             // if (atLeastOneAction) {
                 __interfaceSolver__addClause(cls);
             // } else {
@@ -1497,69 +1506,6 @@ void Encoding::encodeOperationConstraints_LiftedTreePath(Position& newPos) {
             __interfaceSolver__addClause(-aVar, (pre._negated?-1:1)*_vars.getVariableUniqueID(VarType::FACT, newPos, pre._usig));
         }
 
-        // Now, if this action if the first child of a method, then we must as well encode the preconditions of the parent method 
-        // (and if this method is the first child of a method, then we must encode the preconditions of that parent method, and so on)
-        if (id_action_to_parent_method_preconditions.count(aSig._unique_id)) {
-            // Log::i("REUSE PRECOND ALREADY COMPTED FOR %s\n", Names::to_SMT_string(aSig).c_str());
-            for (const Signature& pre : id_action_to_parent_method_preconditions.at(aSig._unique_id)) {
-                if (!_vars.isEncodedUniqueID(VarType::FACT, layerIdx, pos, pre._usig)) continue;
-                __interfaceSolver__addClause(-aVar, (pre._negated?-1:1)*_vars.getVariableUniqueID(VarType::FACT, newPos, pre._usig));
-            }
-        } 
-        else if (aSig.first_child_of_reduction) {
-            // Get the above position
-
-            Log::d("First child of reduction: %s\n", Names::to_SMT_string(aSig).c_str());
-
-            Position abovePos = _layers[newPos.getLayerIndex()]->at(newPos.getPositionIndex());
-            USignature rSig(aSig);
-            size_t parent_layer;
-            size_t parent_pos;
-            while (_htn.isAction(rSig)) {
-                rSig = *abovePos.getPredecessorsWithUniqueID().at(rSig._unique_id).begin();
-                parent_layer = abovePos.getLayerIndex() - 1;
-                parent_pos = abovePos.getAbovePositionIndex();
-                abovePos = _layers[parent_layer]->at(parent_pos);
-            }
-
-            Log::d("Parent reduction: %s\n", Names::to_SMT_string(rSig).c_str());
-
-            // Add the preconditions of the reduction
-            for (const Signature pre : _htn.getOpTable().getReduction(rSig).getPreconditions()) {
-                if (!_vars.isEncodedUniqueID(VarType::FACT, layerIdx, pos, pre._usig)) continue;
-                __interfaceSolver__addClause(-aVar, (pre._negated?-1:1)*_vars.getVariableUniqueID(VarType::FACT, newPos, pre._usig));
-                // Add as well those preconditions into our map
-                id_action_to_parent_method_preconditions[aSig._unique_id].insert(pre);
-            }
-
-            while (rSig.first_child_of_reduction) {
-
-                USigSetUniqueID all = abovePos.getPredecessorsWithUniqueID().at(rSig._unique_id);
-
-                assert(all.size() == 1);
-
-                rSig = *abovePos.getPredecessorsWithUniqueID().at(rSig._unique_id).begin();
-
-                // Get the parent of this reduction 
-                parent_layer = abovePos.getLayerIndex() - 1;
-                parent_pos = abovePos.getAbovePositionIndex();
-                abovePos = _layers[parent_layer]->at(parent_pos);
-
-                if (parent_layer == 0) {
-                    break;
-                }
-
-                Log::d("Parent reduction: %s\n", Names::to_SMT_string(rSig).c_str());
-
-                // Add the preconditions of the reduction
-                for (const Signature& pre : _htn.getOpTable().getReduction(rSig).getPreconditions()) {
-                    if (!_vars.isEncodedUniqueID(VarType::FACT, layerIdx, pos, pre._usig)) continue;
-                    __interfaceSolver__addClause(-aVar, (pre._negated?-1:1)*_vars.getVariableUniqueID(VarType::FACT, newPos, pre._usig));
-                    // Add as well those preconditions into our map
-                    id_action_to_parent_method_preconditions[aSig._unique_id].insert(pre);
-                }
-            }         
-        }
     }
     _stats.end(STAGE_ACTIONCONSTRAINTS);
     // _stats.begin(STAGE_REDUCTIONCONSTRAINTS);

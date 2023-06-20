@@ -104,6 +104,7 @@ void Position::addAction(USignature&& action) {
 }
 void Position::addReduction(const USignature& reduction) {
     _reductions.insert(reduction);
+    _reductionsWithUniqueID.insert(reduction);
     Log::d("+REDUCTION@(%i,%i) %s\n", _layer_idx, _pos, TOSTR(reduction));
 }
 void Position::addExpansion(const USignature& parent, const USignature& child) {
@@ -226,6 +227,7 @@ void Position::removeActionOccurrence(const USignature& action) {
 }
 void Position::removeReductionOccurrence(const USignature& reduction) {
     _reductions.erase(reduction);
+    _reductionsWithUniqueID.erase(reduction);
     for (auto& [parent, children] : _expansions) {
         if (parent._unique_id == 29) {
             int dbg = 0;
@@ -275,7 +277,9 @@ void Position::moveVariableTable(VarType type, Position& destination) {
 
 bool Position::hasQFact(const USignature& fact) const {return _qfacts.count(fact);}
 bool Position::hasAction(const USignature& action) const {return _actions.count(action);}
+bool Position::hasActionWithUniqueID(const USignature& action) const {return _actionsWithUniqueID.count(action);}
 bool Position::hasReduction(const USignature& red) const {return _reductions.count(red);}
+bool Position::hasReductionWithUniqueID(const USignature& red) const {return _reductionsWithUniqueID.count(red);}
 
 size_t Position::getLayerIndex() const {return _layer_idx;}
 size_t Position::getPositionIndex() const {return _pos;}
@@ -306,6 +310,7 @@ const NodeHashMap<USignature, std::vector<TypeConstraint>, USignatureHasher>& Po
 
 USigSet& Position::getActions() {return _actions;}
 USigSetUniqueID& Position::getActionsWithUniqueID() {return _actionsWithUniqueID;}
+USigSetUniqueID& Position::getReductionsWithUniqueID() {return _reductionsWithUniqueID;}
 USigSet& Position::getReductions() {return _reductions;}
 NodeHashMap<USignature, USigSetUniqueID, USignatureHasherWithUniqueID, USignatureEqualityWithUniqueID>& Position::getExpansions() {return _expansions;}
 NodeHashMap<USignature, USigSet, USignatureHasher>& Position::getPredecessors() {return _predecessors;}

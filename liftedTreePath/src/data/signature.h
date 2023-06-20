@@ -186,6 +186,15 @@ struct PositionedUSigHasher {
         return hash;
     }
 };
+struct PositionedUSigHasherWithUniqueID {
+    USignatureHasherWithUniqueID usigHasher;
+    std::size_t operator()(const PositionedUSig& x) const {
+        size_t hash = x.layer;
+        hash_combine(hash, x.pos);
+        hash_combine(hash, usigHasher(x.usig));
+        return hash;
+    }
+};
 struct SigVecHasher {
     SignatureHasher _sig_hasher;
     inline std::size_t operator()(const std::vector<Signature>& s) const {

@@ -33,7 +33,7 @@ HtnInstance::HtnInstance(Parameters& params) :
 
     for (const predicate_definition& p : predicate_definitions)
         extractPredSorts(p);
-    for (const task& t : primitive_tasks)
+    for (const task& t : primitive_tasks) 
         extractTaskSorts(t);
     for (const task& t : abstract_tasks)
         extractTaskSorts(t);
@@ -55,7 +55,6 @@ HtnInstance::HtnInstance(Parameters& params) :
     for (const task& t : primitive_tasks) {
         createAction(t);
     }
-
     // Create reductions
     for (method& method : methods) {
         createReduction(method);
@@ -88,15 +87,30 @@ ParsedProblem* HtnInstance::parse(std::string domainFile, std::string problemFil
         exit(1);
     }
 
-    char* args[3];
-    args[0] = (char*)firstArg;
-    args[1] = (char*)domainStr;
-    args[2] = (char*)problemStr;
 
-    ParsedProblem* p = new ParsedProblem();
-    optind = 1;
-    run_pandaPIparser(3, args, *p);
-    return p;
+    if (_params.isNonzero("useLiftedTreePathEncoder")) {
+        char* args[4];
+        args[0] = (char*)firstArg;
+        args[1] = (char*)domainStr;
+        args[2] = (char*)problemStr;
+        // Add parameter to prevent split
+        args[3] = (char*)"-s";
+
+        ParsedProblem* p = new ParsedProblem();
+        optind = 1;
+        run_pandaPIparser(4, args, *p);
+        return p;
+    } else {
+        char* args[3];
+        args[0] = (char*)firstArg;
+        args[1] = (char*)domainStr;
+        args[2] = (char*)problemStr;
+
+        ParsedProblem* p = new ParsedProblem();
+        optind = 1;
+        run_pandaPIparser(3, args, *p);
+        return p;
+    }
 }
 
 void HtnInstance::printStatistics() {
@@ -431,14 +445,15 @@ Reduction& HtnInstance::createReduction(method& method) {
             task precTask;
             size_t maxSize = 0;
             int numFound = 0;
-            for (const task& t : primitive_tasks) {
+            for (task& t : primitive_tasks) {
                 
                 // Normalize task name
                 std::string taskName = t.name;
                 Regex::extractCoreNameOfSplittingMethod(taskName);
 
                 //Log::d(" ~~~ %s\n", taskName.c_str());
-                if (subtaskName.rfind(taskName) != std::string::npos) {
+                // if (subtaskName.rfind(taskName) != std::string::npos) {
+                if ((_params.isNonzero("useLiftedTreePathEncoder") && subtaskName == taskName) || (!_params.isNonzero("useLiftedTreePathEncoder") && subtaskName.rfind(taskName) != std::string::npos)) {
 
                     size_t size = t.name.size();
                     if (size < maxSize) continue;
@@ -448,7 +463,12 @@ Reduction& HtnInstance::createReduction(method& method) {
                     precTask = t;
                 }
             }
-            assert(numFound >= 1);
+            if (_params.isNonzero("useLiftedTreePathEncoder")) {
+                assert(numFound == 1);
+            } else {
+                assert(numFound >= 1);
+            }
+            Log::d("Found %i primitive tasks for method precondition %s\n", numFound, subtaskName.c_str());
             Log::d("- Using %i preconds of prim. task %s as preconds of method %s\n",
                     precTask.prec.size() + precTask.constraints.size(), precTask.name.c_str(), st.task.c_str());
 
@@ -471,7 +491,13 @@ Reduction& HtnInstance::createReduction(method& method) {
                 }
             }
 
-            // (Do not add the task to the method's subtasks)
+            // (Add the subtasks only if we use liftedTreePath
+
+
+            if (_params.isNonzero("useLiftedTreePathEncoder")) {
+                _methods[id].addSubtask(USignature(nameId(precTask.name), convertArguments(id, precTask.vars)));
+                subtaskTagToIndex[st.id] = subtaskTagToIndex.size();   
+            }
 
         } else {
             // Actual subtask
@@ -481,7 +507,7 @@ Reduction& HtnInstance::createReduction(method& method) {
     }
 
     // Process constraints of the method
-    for (auto& pre : extractEqualityConstraints(id, condLiterals, method.vars))
+    for (auto& pre : extractEqualityConstraints(id, condLiterals, method.vars)) 
         _methods[id].addPrecondition(std::move(pre));
 
     // Process preconditions of the method
@@ -691,7 +717,7 @@ std::vector<int> HtnInstance::replaceVariablesWithQConstants(const HtnOp& op,
     if (op.getArguments().empty()) return std::vector<int>();
     std::vector<int> vecFailure(1, -1);
 
-
+    
     // USignature newSig_test(op.getSignature()._name_id, op.getArguments());
     // if (layerIdx == 3 and pos == 12) {
     //     int dbg = 0;

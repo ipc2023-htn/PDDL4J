@@ -101,10 +101,10 @@ void RetroactivePruning::prune(const USignature& op, int layerIdx, int pos) {
 
 void RetroactivePruning::pruneLiftedTreePath(const USignature& op, int layerIdx, int pos) {
 
-    NodeHashSet<PositionedUSig, PositionedUSigHasher> opsToRemove;
-    NodeHashSet<PositionedUSig, PositionedUSigHasher> openOps;
+    NodeHashSet<PositionedUSig, PositionedUSigHasherWithUniqueID> opsToRemove;
+    NodeHashSet<PositionedUSig, PositionedUSigHasherWithUniqueID> openOps;
     openOps.emplace(layerIdx, pos, op);
-    NodeHashMap<PositionedUSig, USigSet, PositionedUSigHasher> removedExpansionsOfParents;
+    NodeHashMap<PositionedUSig, USigSet, PositionedUSigHasherWithUniqueID> removedExpansionsOfParents;
 
     // Traverse the hierarchy upwards, removing expansions/predecessors
     // and marking all "root" operations whose induces subtrees should be pruned 
@@ -121,7 +121,7 @@ void RetroactivePruning::pruneLiftedTreePath(const USignature& op, int layerIdx,
         }
 
         Position& position = _layers[psig.layer]->at(psig.pos);
-        assert(position.hasAction(psig.usig) || position.hasReduction(psig.usig));
+        assert(position.hasActionWithUniqueID(psig.usig) || position.hasReductionWithUniqueID(psig.usig));
         int oldPos = 0;
         Layer& oldLayer = *_layers.at(psig.layer-1);
         while (oldPos+1 < (int)oldLayer.size() && oldLayer.getSuccessorPos(oldPos+1) <= psig.pos) 
@@ -156,7 +156,7 @@ void RetroactivePruning::pruneLiftedTreePath(const USignature& op, int layerIdx,
         opsToRemove.erase(psig);
         Position& position = _layers[psig.layer]->at(psig.pos);
         Log::d("PRUNE_DOWN %s\n", TOSTR(psig));
-        assert(position.hasAction(psig.usig) || position.hasReduction(psig.usig));
+        assert(position.hasActionWithUniqueID(psig.usig) || position.hasReductionWithUniqueID(psig.usig));
 
         // Go down one layer and mark all children for removal which have only one predecessor left
         if (psig.layer+1 < _layers.size()) {

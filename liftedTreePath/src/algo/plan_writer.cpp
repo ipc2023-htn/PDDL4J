@@ -17,6 +17,7 @@ void PlanWriter::outputPlan(Plan& _plan) {
     stream << "==>\n";
     FlatHashSet<int> actionIds;
     FlatHashSet<int> idsToRemove;
+    FlatHashSet<int> actionsIdsMethodPrec;
 
     FlatHashMap<int, int> surroageToMethodParent;
 
@@ -56,6 +57,12 @@ void PlanWriter::outputPlan(Plan& _plan) {
             USignature childSigCopy = childSig;
             childSigCopy._unique_id = item.id;
             item.abstractTask = childSigCopy;
+        }
+
+        if (_htn.toString(item.abstractTask._name_id).rfind("<method_prec>") != std::string::npos) { 
+            // Method precondition: discard
+            idsToRemove.insert(item.id);
+            continue;
         }
 
         actionIds.insert(item.id);
