@@ -15,5 +15,6 @@ To execute via apptainer:
 ## LiftedTreePath
 SMT-based Total Order planner
 
-Usage:
->
+To execute via apptainer:
+> sudo apptainer build ltp.sif LiftedTreePath.def\
+> apptainer run ltp.sif [hddl domain] [hddl problem]

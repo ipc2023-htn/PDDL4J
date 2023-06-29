@@ -2,7 +2,6 @@ _*
 *.pdf
 *.o
 *.a
-lib/*
 lilotane
 .vscode
 OUT
@@ -12,7 +11,6 @@ SOLUTION
 picosat
 PANDA.jar
 logs/
-src/pandaPIparser/
 benchmarks/*
 *.o.d
 build/*
