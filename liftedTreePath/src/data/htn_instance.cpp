@@ -122,10 +122,17 @@ HtnInstance::HtnInstance(Parameters& params) :
                 for (const auto& [t1,t2] : method.ordering)
                     tasksOfMethod.erase(t2);
 
-                // Confirm that there is only one task left
-                assert(tasksOfMethod.size() == 1);
+                // Confirm that there is only one task left (or 0 if this method does not have any subtak)
+                assert(tasksOfMethod.size() <= 1);
 
-                method.ordering.push_back(make_pair(ps.id, *tasksOfMethod.begin()));
+                if (tasksOfMethod.size() == 0) {
+                    // This method does not have any subtask
+                    // So this method does not follow any other task
+                    method.ordering.push_back(make_pair(ps.id, ""));
+                } else {
+                    method.ordering.push_back(make_pair(ps.id, *tasksOfMethod.begin()));
+                }
+                
                 method.ps.push_back(ps);
             }
         }
