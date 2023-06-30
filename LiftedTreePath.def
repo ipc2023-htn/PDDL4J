@@ -42,7 +42,7 @@ From: ubuntu:22.04
 	MEMORYLIMIT=$5
 
 	## run your planner here
-	/planner/liftedTreePath/build/lilotane $1 $2 -vp=1 -edo=0 -aar=0 -v=0 -useLiftedTreePathEncoder=1 -wp=$3
+	/planner/liftedTreePath/build/lilotane $1 $2 -vp=0 -edo=0 -aar=0 -v=0 -useLiftedTreePathEncoder=1 -wp=$3
 
 
 ## Update the following fields with meta data about your submission.
