@@ -31,15 +31,15 @@ HtnInstance::HtnInstance(Parameters& params) :
     _blank_action_sig = BLANK_ACTION.getSignature();
     _signature_sorts_table[blankId];
 
-    // For LiftedTreePath, we need to report the method equality constrains to its first subtask.
+    // For LiftedTreePath, we need to report the method equality constrains and all parameters of the method into its first subtask.
     // So two cases here, either we already have a <method_precondition> primitive action for this method as a first subtask
-    // In which case, we add the constrains to the <method_precondition> primitive subtask
-    // Or we don't have such a primitive action, in that case we need to create a method_precondition primitive action for this method and add the constrains to it
+    // In which case, we add the constrains to the <method_precondition> primitive subtask (and all missing parameters of the method)
+    // Or we don't have such a primitive action, in that case we need to create a method_precondition primitive action for this method and add the constrains and 
+    // all parameters of the method to it
     if (_params.isNonzero("useLiftedTreePathEncoder")) {
 
         for (method& method : methods) {
 
-            if (method.constraints.size() == 0) continue;
 
             bool hasMethodPreconditionPrimitiveAction = false;
 
@@ -63,7 +63,9 @@ HtnInstance::HtnInstance(Parameters& params) :
                         if (subtaskName == taskName) {
                             hasMethodPreconditionPrimitiveAction = true;
                             // Add the constrains to the <method_precondition> primitive subtask
-                            t.constraints = method.constraints;
+
+                            for (const auto& c : method.constraints)
+                                t.constraints.push_back(c);
 
                             // Add all the parameters of the parent method
                             t.number_of_original_vars = 0;
