@@ -95,6 +95,7 @@ private:
     void incrementPosition();
 
     void addPreconditionConstraints();
+    void addPreconditionConstraintsUniqueID();
     void addPreconditionsAndConstraints(const USignature& op, const SigSet& preconditions, bool isActionRepetition);
     std::optional<SubstitutionConstraint> addPrecondition(const USignature& op, const Signature& fact, bool addQFact = true);
     

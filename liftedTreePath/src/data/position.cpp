@@ -304,7 +304,7 @@ IndirectFactSupportMap& Position::getNegIndirectFactSupports() {
     if (_neg_indir_fact_supports == nullptr) return EMPTY_INDIRECT_FACT_SUPPORT_MAP;
     return *_neg_indir_fact_supports;
 }
-const NodeHashMap<USignature, std::vector<TypeConstraint>, USignatureHasher>& Position::getQConstantsTypeConstraints() const {
+const NodeHashMap<USignature, std::vector<TypeConstraint>, USignatureHasherWithUniqueID, USignatureEqualityWithUniqueID>& Position::getQConstantsTypeConstraints() const {
     return _q_constants_type_constraints;
 }
 

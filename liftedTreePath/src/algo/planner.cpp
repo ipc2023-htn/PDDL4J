@@ -881,12 +881,12 @@ void Planner::createNextPositionFromAbove() {
     if (USE_LIFTED_TREE_PATH) {
         propagateActionsWithUniqueID(offset);
         propagateReductionsWithUniqueID(offset);
+        addPreconditionConstraintsUniqueID();
     } else {
         propagateActions(offset);
         propagateReductions(offset);
+        addPreconditionConstraints();   
     }
-
-    addPreconditionConstraints();
 }
 
 void Planner::createNextPositionFromLeft(Position& left) {
@@ -950,6 +950,22 @@ void Planner::addPreconditionConstraints() {
     }
 
     for (const auto& rSig : newPos.getReductions()) {
+        // Add preconditions of reduction
+        addPreconditionsAndConstraints(rSig, _htn.getOpTable().getReduction(rSig).getPreconditions(), /*isRepetition=*/false);
+    }
+}
+
+void Planner::addPreconditionConstraintsUniqueID() {
+    Position& newPos = _layers[_layer_idx]->at(_pos);
+
+    for (const auto& aSig : newPos.getActionsWithUniqueID()) {
+        const Action& a = _htn.getOpTable().getAction(aSig);
+        // Add preconditions of action
+        bool isRepetition = _htn.isActionRepetition(aSig._name_id);
+        addPreconditionsAndConstraints(aSig, a.getPreconditions(), isRepetition);
+    }
+
+    for (const auto& rSig : newPos.getReductionsWithUniqueID()) {
         // Add preconditions of reduction
         addPreconditionsAndConstraints(rSig, _htn.getOpTable().getReduction(rSig).getPreconditions(), /*isRepetition=*/false);
     }
