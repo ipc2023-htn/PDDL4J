@@ -101,6 +101,7 @@ std::vector<PlanItem> extractClassicalPlanLiftedTreePath(PlanExtraction mode = P
             Log::log_notime(Log::V4_DEBUG, "\n");
 
             int chosenActions = 0;
+            bool isMethodPrecond = false;
             //State newState = state;
             for (const auto& [sig, aVar] : finalLayer[pos].getVariableTableOPUniqueID()) {
                 // if (_useSmt && !_smt.holds(aVar)) continue;
@@ -121,6 +122,14 @@ std::vector<PlanItem> extractClassicalPlanLiftedTreePath(PlanExtraction mode = P
                 
                 Log::d("PLANDBG %i,%i A %s\n", li, pos, TOSTR(aSig));
 
+                isMethodPrecond = false;
+                // If this is a method precondition (start with <method_prec>), then do not add it to the plan
+                std::string name = TOSTR(aSig);
+                // Carefull, must be find that <method_prec> is at the start of the string
+                if (name.find("(<method_prec>") == 0) {
+                    isMethodPrecond = true;
+                }
+
                 // aVar = aSig._unique_id;
 
                 int v = aSig._unique_id;
@@ -136,7 +145,8 @@ std::vector<PlanItem> extractClassicalPlanLiftedTreePath(PlanExtraction mode = P
             }
 
             assert(chosenActions <= 1 || Log::e("Plan error: Added %i actions at step %i!\n", chosenActions, pos));
-            if (chosenActions == 0) {
+            
+            if (chosenActions == 0) { // || isMethodPrecond) {
                 plan[pos] = {-1, USignature(), USignature(), std::vector<int>()};
             }
         }
@@ -299,6 +309,9 @@ std::vector<PlanItem> extractClassicalPlanLiftedTreePath(PlanExtraction mode = P
         for (int i = 0; i < classicalPlan.size(); i++) {
             auto& aSig = classicalPlan[i].reduction;
 
+            if (aSig._name_id == -1) {
+                continue;
+            }
             // Get its position objects
             Position& pos = lastLayer[i];
 
@@ -417,6 +430,10 @@ std::vector<PlanItem> extractClassicalPlanLiftedTreePath(PlanExtraction mode = P
                 // Get the action/reduction true for this layer position
                 const USignature& actionOrReductionTrue = l[pos].getActionOrReductionTrue(); 
 
+                if (actionOrReductionTrue._name_id == -1) {
+                    Log::i("No action or reduction true at this position\n");
+                    continue;
+                }
                 // Display the action or reduction true
                 Log::i("  %s\n", TOSTR(actionOrReductionTrue));
 

@@ -95,6 +95,7 @@ private:
     void incrementPosition();
 
     void addPreconditionConstraints();
+    void addPreconditionConstraintsUniqueID();
     void addPreconditionsAndConstraints(const USignature& op, const SigSet& preconditions, bool isActionRepetition);
     std::optional<SubstitutionConstraint> addPrecondition(const USignature& op, const Signature& fact, bool addQFact = true);
     
@@ -107,6 +108,7 @@ private:
     void propagateActions(size_t offset);
     void propagateActionsWithUniqueID(size_t offset);
     void propagateReductions(size_t offset);
+    void propagateReductionsWithUniqueID(size_t offset);
     std::vector<USignature> instantiateAllActionsOfTask(const USignature& task);
     std::vector<USignature> instantiateAllReductionsOfTask(const USignature& task);
     void initializeNextEffects();

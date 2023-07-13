@@ -31,6 +31,115 @@ HtnInstance::HtnInstance(Parameters& params) :
     _blank_action_sig = BLANK_ACTION.getSignature();
     _signature_sorts_table[blankId];
 
+    // For LiftedTreePath, we need to report the method equality constrains and all parameters of the method into its first subtask.
+    // So two cases here, either we already have a <method_precondition> primitive action for this method as a first subtask
+    // In which case, we add the constrains to the <method_precondition> primitive subtask (and all missing parameters of the method)
+    // Or we don't have such a primitive action, in that case we need to create a method_precondition primitive action for this method and add the constrains and 
+    // all parameters of the method to it
+    if (_params.isNonzero("useLiftedTreePathEncoder")) {
+
+        for (method& method : methods) {
+
+
+            bool hasMethodPreconditionPrimitiveAction = false;
+
+            for (const plan_step& st : method.ps) {
+    
+                // Normalize task name
+                std::string subtaskName = st.task;
+                Regex::extractCoreNameOfSplittingMethod(subtaskName);
+                Log::d("%s\n", subtaskName.c_str());
+
+                if (subtaskName.rfind(method_precondition_action_name) != std::string::npos) {
+                    // This "subtask" is a method precondition which was compiled out
+                    
+                    // Find primitive task belonging to this method precondition
+                    for (task& t : primitive_tasks) {
+                        
+                        // Normalize task name
+                        std::string taskName = t.name;
+                        Regex::extractCoreNameOfSplittingMethod(taskName);
+
+                        if (subtaskName == taskName) {
+                            hasMethodPreconditionPrimitiveAction = true;
+                            // Add the constrains to the <method_precondition> primitive subtask
+
+                            for (const auto& c : method.constraints)
+                                t.constraints.push_back(c);
+
+                            // Add all the parameters of the parent method
+                            t.number_of_original_vars = 0;
+                            t.vars.clear();
+                            for (const auto& varPair : method.vars) {
+                                t.vars.push_back(varPair);
+                                t.number_of_original_vars++;
+                            }
+                        }
+                    }
+                }
+            }
+
+
+            if (!hasMethodPreconditionPrimitiveAction) {
+                // We need to create a new action for this method precondition
+                // parsed_task mPrec_task;
+                // mPrec_task.name = method_precondition_action_name + method.name;
+                // mPrec_task.con = pm.prec;
+                // mPrec_task.arguments = new var_declaration();
+
+                task mPrec_task;
+                mPrec_task.name = method_precondition_action_name + method.name;
+                mPrec_task.constraints = method.constraints;
+
+                // Add as well all the parameters of the parent method
+                mPrec_task.number_of_original_vars = 0;
+                for (const auto& varPair : method.vars) {
+                    mPrec_task.vars.push_back(varPair);
+                    mPrec_task.number_of_original_vars++;
+                }
+
+                mPrec_task.check_integrity();
+
+                // Add the primitive task to the list of primitive tasks
+                primitive_tasks.push_back(mPrec_task);
+                task_name_map[mPrec_task.name] = mPrec_task;
+
+                // Now, add this primitive task as the first subtask of the method
+                plan_step ps;
+                ps.id = "mprec";
+                ps.task = mPrec_task.name;
+                for (auto [v,_] : mPrec_task.vars)
+                    ps.args.push_back(v);
+
+                // Get the id of the first task of the method
+                // To do that, create a set with all the tasks of the method
+                // and then, remove all the tasks which follow another task
+                std::set<std::string> tasksOfMethod;
+
+                // Add all the tasks of the method
+                for (const plan_step& ps : method.ps)
+                    tasksOfMethod.insert(ps.id);
+
+                // Remove all the tasks which follow another task
+                for (const auto& [t1,t2] : method.ordering)
+                    tasksOfMethod.erase(t2);
+
+                // Confirm that there is only one task left (or 0 if this method does not have any subtak)
+                assert(tasksOfMethod.size() <= 1);
+
+                if (tasksOfMethod.size() == 0) {
+                    // This method does not have any subtask
+                    // So this method does not follow any other task
+                    method.ordering.push_back(make_pair(ps.id, ""));
+                } else {
+                    method.ordering.push_back(make_pair(ps.id, *tasksOfMethod.begin()));
+                }
+                
+                method.ps.push_back(ps);
+            }
+        }
+    }
+
     for (const predicate_definition& p : predicate_definitions)
         extractPredSorts(p);
     for (const task& t : primitive_tasks)
@@ -55,8 +164,7 @@ HtnInstance::HtnInstance(Parameters& params) :
     for (const task& t : primitive_tasks) {
         createAction(t);
     }
-
-    // Create reductions
+        // Create reductions
     for (method& method : methods) {
         createReduction(method);
     }
@@ -88,15 +196,30 @@ ParsedProblem* HtnInstance::parse(std::string domainFile, std::string problemFil
         exit(1);
     }
 
-    char* args[3];
-    args[0] = (char*)firstArg;
-    args[1] = (char*)domainStr;
-    args[2] = (char*)problemStr;
 
-    ParsedProblem* p = new ParsedProblem();
-    optind = 1;
-    run_pandaPIparser(3, args, *p);
-    return p;
+    if (_params.isNonzero("useLiftedTreePathEncoder")) {
+        char* args[4];
+        args[0] = (char*)firstArg;
+        args[1] = (char*)domainStr;
+        args[2] = (char*)problemStr;
+        // Add parameter to prevent split
+        args[3] = (char*)"-s";
+
+        ParsedProblem* p = new ParsedProblem();
+        optind = 1;
+        run_pandaPIparser(4, args, *p);
+        return p;
+    } else {
+        char* args[3];
+        args[0] = (char*)firstArg;
+        args[1] = (char*)domainStr;
+        args[2] = (char*)problemStr;
+
+        ParsedProblem* p = new ParsedProblem();
+        optind = 1;
+        run_pandaPIparser(3, args, *p);
+        return p;
+    }
 }
 
 void HtnInstance::printStatistics() {
@@ -431,14 +554,15 @@ Reduction& HtnInstance::createReduction(method& method) {
             task precTask;
             size_t maxSize = 0;
             int numFound = 0;
-            for (const task& t : primitive_tasks) {
+            for (task& t : primitive_tasks) {
                 
                 // Normalize task name
                 std::string taskName = t.name;
                 Regex::extractCoreNameOfSplittingMethod(taskName);
 
                 //Log::d(" ~~~ %s\n", taskName.c_str());
-                if (subtaskName.rfind(taskName) != std::string::npos) {
+                // if (subtaskName.rfind(taskName) != std::string::npos) {
+                if ((_params.isNonzero("useLiftedTreePathEncoder") && subtaskName == taskName) || (!_params.isNonzero("useLiftedTreePathEncoder") && subtaskName.rfind(taskName) != std::string::npos)) {
 
                     size_t size = t.name.size();
                     if (size < maxSize) continue;
@@ -448,7 +572,12 @@ Reduction& HtnInstance::createReduction(method& method) {
                     precTask = t;
                 }
             }
-            assert(numFound >= 1);
+            if (_params.isNonzero("useLiftedTreePathEncoder")) {
+                assert(numFound == 1);
+            } else {
+                assert(numFound >= 1);
+            }
+            Log::d("Found %i primitive tasks for method precondition %s\n", numFound, subtaskName.c_str());
             Log::d("- Using %i preconds of prim. task %s as preconds of method %s\n",
                     precTask.prec.size() + precTask.constraints.size(), precTask.name.c_str(), st.task.c_str());
 
@@ -471,7 +600,13 @@ Reduction& HtnInstance::createReduction(method& method) {
                 }
             }
 
-            // (Do not add the task to the method's subtasks)
+            // (Add the subtasks only if we use liftedTreePath
+
+
+            if (_params.isNonzero("useLiftedTreePathEncoder")) {
+                _methods[id].addSubtask(USignature(nameId(precTask.name), convertArguments(id, precTask.vars)));
+                subtaskTagToIndex[st.id] = subtaskTagToIndex.size();   
+            }
 
         } else {
             // Actual subtask
@@ -691,7 +826,7 @@ std::vector<int> HtnInstance::replaceVariablesWithQConstants(const HtnOp& op,
     if (op.getArguments().empty()) return std::vector<int>();
     std::vector<int> vecFailure(1, -1);
 
-
+    
     // USignature newSig_test(op.getSignature()._name_id, op.getArguments());
     // if (layerIdx == 3 and pos == 12) {
     //     int dbg = 0;

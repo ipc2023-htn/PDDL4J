@@ -728,7 +728,7 @@ void Planner::debug_write_all_paths_in_file(Layer& layer, int layerIdx) {
     for (int posIdx = 0; posIdx < layer.size(); posIdx++) {
         Position& newPos = layer[posIdx]; 
         std::string posString = std::to_string(posIdx);
-        for (USignature& rSig : newPos.getReductions()) {
+        for (USignature& rSig : newPos.getReductionsWithUniqueID()) {
             file << Names::to_SMT_string(rSig, false) << "__" << posString << " 0 0" << std::endl;
         }
         for (USignature& aSig : newPos.getActionsWithUniqueID()) {
@@ -880,12 +880,13 @@ void Planner::createNextPositionFromAbove() {
     //eliminateInvalidParentsAtCurrentState(offset);
     if (USE_LIFTED_TREE_PATH) {
         propagateActionsWithUniqueID(offset);
+        propagateReductionsWithUniqueID(offset);
+        addPreconditionConstraintsUniqueID();
     } else {
         propagateActions(offset);
+        propagateReductions(offset);
+        addPreconditionConstraints();   
     }
-    
-    propagateReductions(offset);
-    addPreconditionConstraints();
 }
 
 void Planner::createNextPositionFromLeft(Position& left) {
@@ -949,6 +950,22 @@ void Planner::addPreconditionConstraints() {
     }
 
     for (const auto& rSig : newPos.getReductions()) {
+        // Add preconditions of reduction
+        addPreconditionsAndConstraints(rSig, _htn.getOpTable().getReduction(rSig).getPreconditions(), /*isRepetition=*/false);
+    }
+}
+
+void Planner::addPreconditionConstraintsUniqueID() {
+    Position& newPos = _layers[_layer_idx]->at(_pos);
+
+    for (const auto& aSig : newPos.getActionsWithUniqueID()) {
+        const Action& a = _htn.getOpTable().getAction(aSig);
+        // Add preconditions of action
+        bool isRepetition = _htn.isActionRepetition(aSig._name_id);
+        addPreconditionsAndConstraints(aSig, a.getPreconditions(), isRepetition);
+    }
+
+    for (const auto& rSig : newPos.getReductionsWithUniqueID()) {
         // Add preconditions of reduction
         addPreconditionsAndConstraints(rSig, _htn.getOpTable().getReduction(rSig).getPreconditions(), /*isRepetition=*/false);
     }
@@ -1430,6 +1447,149 @@ void Planner::propagateReductions(size_t offset) {
                 //     }
                 // }
 
+            }
+        }
+
+        // Any action(s) fitting the subtask?
+        for (USignature& aSig : allActions) {
+
+            // TEST
+            aSig.setNextId();
+            if (offset == 0) {
+                aSig.setFirstChildOfReduction(true);
+            }
+            // END TEST
+
+            assert(_htn.isFullyGround(aSig));
+            newPos.addAction(aSig);
+
+            if (newPos.getLayerIndex() == 4 && newPos.getPositionIndex() == 17) {
+                Log::i("Flow: %s\n", Names::to_SMT_string(aSig, true).c_str());
+                // ACTION__drive-truck_0-Q_3-12_location%0_4e6d4ef15ccc6897-Q_2-8_location%0_e4354a9774db1231
+                int dbg = 0;
+            }
+
+            for (const auto& rSig : parents) {
+                reductionsWithChildren.insert(rSig);
+                newPos.addExpansion(rSig, aSig);
+
+                if (USE_LIFTED_TREE_PATH) {
+                    // Needs to inherit the domain from the parent
+                    _htn.inheritQConstFromParent(aSig, rSig);
+                }
+            }
+        }
+    }
+
+
+    // Print all the expansions
+    if (newPos.getPositionIndex() == 0 && newPos.getLayerIndex() == 4) {
+        for (auto& [rSig, exps] : newPos.getExpansions()) {
+            for (USignature aSig : exps) {
+                Log::i("Expansion of (%i): (%i)\n", rSig._unique_id, aSig._unique_id);
+            }
+        }
+
+        int ebg = 0;
+    }
+
+    // Check if any reduction has no valid children at all
+    for (const auto& rSig : above.getReductions()) {
+        if (!reductionsWithChildren.count(rSig)) {
+            Log::i("Retroactively prune reduction %s@(%i,%i): no children at offset %i\n", 
+                    TOSTR(rSig), _layer_idx-1, _old_pos, offset);
+            if (USE_LIFTED_TREE_PATH) {
+                _pruning.pruneLiftedTreePath(rSig, _layer_idx-1, _old_pos);
+            } else {
+                _pruning.prune(rSig, _layer_idx-1, _old_pos);
+            }
+        }
+    }
+}
+
+
+void Planner::propagateReductionsWithUniqueID(size_t offset) {
+    Position& newPos = (*_layers[_layer_idx])[_pos];
+    Position& above = (*_layers[_layer_idx-1])[_old_pos];
+
+    NodeHashMap<USignature, USigSetUniqueID, USignatureHasherWithUniqueID, USignatureEqualityWithUniqueID> subtaskToParents;
+    NodeHashSet<USignature, USignatureHasherWithUniqueID, USignatureEqualityWithUniqueID> reductionsWithChildren;
+
+    // Collect all possible subtasks and remember their possible parents
+    for (const auto& rSig : above.getReductionsWithUniqueID()) {
+
+        const Reduction r = _htn.getOpTable().getReduction(rSig);
+        
+        if (offset < r.getSubtasks().size()) {
+            // Proper expansion
+            USignature subtask = r.getSubtasks()[offset];
+            subtask.setNextId();
+            subtaskToParents[subtask].insert(rSig);
+        } else {
+            // Blank
+            reductionsWithChildren.insert(rSig);
+            // const USignature& blankSig = _htn.getBlankActionSig();
+            USignature& blankSig = _htn.getBlankActionSig();
+
+            blankSig.setNextId();
+            if (offset > 0) {
+                blankSig.setShadowAction(true);
+            } else {
+                blankSig.setFirstChildOfReduction(true);
+            }
+
+            newPos.addAction(blankSig);
+            newPos.addExpansion(rSig, blankSig);
+        }
+    }
+
+    // Iterate over all possible subtasks
+    for (const auto& [subtask, parents] : subtaskToParents) {
+
+        // Calculate all possible actions fitting the subtask.
+        auto allActions = instantiateAllActionsOfTask(subtask);
+
+        // Any reduction(s) fitting the subtask?
+        for (USignature& subRSig : instantiateAllReductionsOfTask(subtask)) {
+
+            if (_htn.isAction(subRSig)) {
+                // Actually an action, not a reduction: remember for later
+                allActions.push_back(subRSig);
+                continue;
+            }
+
+            // TEST
+            subRSig.setNextId();
+            if (offset == 0) {
+                subRSig.setFirstChildOfReduction(true);
+            }
+            // END TEST
+
+            const Reduction& subR = _htn.getOpTable().getReduction(subRSig);
+            
+            assert(_htn.isReduction(subRSig) && subRSig == subR.getSignature() && _htn.isFullyGround(subRSig));
+            
+            newPos.addReduction(subRSig);
+            newPos.addExpansionSize(subR.getSubtasks().size());
+
+            for (const auto& rSig : parents) {
+
+                if (rSig._unique_id == 29) {
+                    int dbg = 0;
+                }
+
+                reductionsWithChildren.insert(rSig);
+                newPos.addExpansion(rSig, subRSig);
+
+                if (newPos.getPositionIndex() == 0 && newPos.getLayerIndex() == 4) {
+
+                    // Print all the expansions
+                    for (auto& [rSig, exps] : newPos.getExpansions()) {
+                        for (USignature aSig : exps) {
+                            Log::i("Expansion of %s(%i): %s(%i)\n", Names::to_SMT_string(rSig, false).c_str(), rSig._unique_id, Names::to_SMT_string(aSig, false).c_str(), aSig._unique_id);
+                        }
+                    }
+                }
                 if (USE_LIFTED_TREE_PATH) {
                     // Needs to inherit the domain from the parent
                     _htn.inheritQConstFromParent(subRSig, rSig);
@@ -1499,7 +1659,7 @@ void Planner::propagateReductions(size_t offset) {
     }
 
     // Check if any reduction has no valid children at all
-    for (const auto& rSig : above.getReductions()) {
+    for (const auto& rSig : above.getReductionsWithUniqueID()) {
         if (!reductionsWithChildren.count(rSig)) {
             Log::i("Retroactively prune reduction %s@(%i,%i): no children at offset %i\n", 
                     TOSTR(rSig), _layer_idx-1, _old_pos, offset);
